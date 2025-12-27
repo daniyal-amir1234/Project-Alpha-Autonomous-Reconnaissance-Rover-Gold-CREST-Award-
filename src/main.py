@@ -1,80 +1,103 @@
 import argparse
 import sys
+import time
 
 import cv2
+from tflite_support.task import core, processor, vision
 
-from src.config import AppConfig
-from src.camera import open_camera
-from src.detector import create_detector
-from src.utils.fps import FpsCounter
-from src.utils.visualization import draw_fps
-
-from src.tracking import TrackingController
+from utils import draw_detections, draw_fps
+from motor import PanTilt
 
 
-def parse_args() -> AppConfig:
-    p = argparse.ArgumentParser(description="Project Alpha - Object Detection + Optional Pan/Tilt Tracking")
+def build_detector(model_path: str, score_threshold: float, max_results: int):
+    base_options = core.BaseOptions(
+        file_name=model_path,
+        num_threads=2  # keeping it small cuz Pi usually doesn't like big thread counts
+    )
 
-    p.add_argument("--model", required=True, help="Path to a .tflite model (e.g., EfficientDet Lite).")
-    p.add_argument("--camera-id", type=int, default=0, help="OpenCV camera index.")
+    detection_options = processor.DetectionOptions(
+        max_results=max_results,
+        score_threshold=score_threshold
+    )
+
+    options = vision.ObjectDetectorOptions(
+        base_options=base_options,
+        detection_options=detection_options
+    )
+
+    return vision.ObjectDetector.create_from_options(options)
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description="Project Alpha (reconstructed) - TFLite object detection")
+    p.add_argument("--model", required=True, help="Path to .tflite model file")
+    p.add_argument("--camera-id", type=int, default=0)
     p.add_argument("--width", type=int, default=640)
     p.add_argument("--height", type=int, default=480)
-
-    p.add_argument("--max-results", type=int, default=3)
     p.add_argument("--score-threshold", type=float, default=0.30)
-    p.add_argument("--num-threads", type=int, default=2)
-
-    p.add_argument("--use-gpio", type=int, default=0, help="1 to enable GPIO stepper output (Pi only).")
-    p.add_argument("--mirror", type=int, default=1, help="1 to flip horizontally like a selfie cam.")
-
-    return AppConfig(
-        model_path=p.parse_args().model,
-        camera_id=p.parse_args().camera_id,
-        width=p.parse_args().width,
-        height=p.parse_args().height,
-        max_results=p.parse_args().max_results,
-        score_threshold=p.parse_args().score_threshold,
-        num_threads=p.parse_args().num_threads,
-        use_gpio=bool(p.parse_args().use_gpio),
-        mirror=bool(p.parse_args().mirror),
-    )
+    p.add_argument("--max-results", type=int, default=3)
+    p.add_argument("--use-gpio", action="store_true", help="Enable Raspberry Pi GPIO turret output")
+    p.add_argument("--mirror", action="store_true", help="Flip camera horizontally")
+    return p.parse_args()
 
 
 def main():
-    cfg = parse_args()
+    args = parse_args()
 
-    cap = open_camera(cfg.camera_id, cfg.width, cfg.height)
-    detector = create_detector(cfg)
+    cap = cv2.VideoCapture(args.camera_id)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
 
-    tracker = TrackingController(use_gpio=cfg.use_gpio)
-    fps_counter = FpsCounter(avg_over_n_frames=10)
+    if not cap.isOpened():
+        print("ERROR: Could not open camera. Try a different --camera-id.", file=sys.stderr)
+        sys.exit(1)
 
-    while cap.isOpened():
-        success, image = cap.read()
-        if not success:
-            print("ERROR: Unable to read from webcam. Please verify your webcam settings.", file=sys.stderr)
-            sys.exit(1)
+    detector = build_detector(args.model, args.score_threshold, args.max_results)
+    turret = PanTilt(enabled=args.use_gpio)
 
-        if cfg.mirror:
-            image = cv2.flip(image, 1)
+    # FPS counter
+    fps_avg_frames = 10
+    frame_count = 0
+    fps = 0.0
+    t0 = time.time()
 
-        # Run detection (detector handles RGB conversion internally)
-        annotated, detection_result = detector.detect_and_annotate(image)
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            print("ERROR: Failed to read frame from camera.", file=sys.stderr)
+            break
 
-        # Optional: use detections to compute pan/tilt adjustments
-        tracker.update(detection_result, frame_shape=image.shape)
+        if args.mirror:
+            frame = cv2.flip(frame, 1)
 
-        # FPS overlay (matches screenshot approach: recompute every N frames)
-        fps = fps_counter.tick()
-        annotated = draw_fps(annotated, fps)
+        # TFLite expects RGB, OpenCV gives BGR
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        tensor = vision.TensorImage.create_from_array(rgb)
 
-        cv2.imshow("project_alpha_detector", annotated)
+        result = detector.detect(tensor)
+
+        # draw results on the original BGR frame for display
+        draw_detections(frame, result)
+
+        # drive turret based on where the best detection is
+        turret.track(result, frame.shape)
+
+        # FPS update
+        frame_count += 1
+        if frame_count % fps_avg_frames == 0:
+            t1 = time.time()
+            fps = fps_avg_frames / max(1e-9, (t1 - t0))
+            t0 = time.time()
+
+        draw_fps(frame, fps)
+
+        cv2.imshow("project_alpha_detector", frame)
 
         # ESC to quit
         if cv2.waitKey(1) == 27:
             break
 
-    tracker.shutdown()
+    turret.shutdown()
     cap.release()
     cv2.destroyAllWindows()
 
