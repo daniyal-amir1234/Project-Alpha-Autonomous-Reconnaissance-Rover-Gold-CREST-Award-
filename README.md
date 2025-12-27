@@ -62,21 +62,14 @@ Fire sentry turret (not actually created)
 ```
 project-alpha-sentry-rover/
 ├─ src/
-│  ├─ main.py            # Main capture + inference loop
+│  ├─ main.py            # main capture + inference loop
 │  ├─ detector.py        # TensorFlow Lite object detector
 │  ├─ camera.py          # USB webcam interface
-│  ├─ tracking.py        # Target selection & offset calculation
-│  ├─ config.py          # Centralised configuration
-│  └─ utils/
-│     ├─ fps.py          # FPS averaging logic
-│     └─ visualization.py
+│  ├─ tracking.py        # target selection and offsetting calculation
+│  ├─ config.py          # centralised configuration
 ├─ hardware/
-│  ├─ pantilt.py         # Pan/tilt controller abstraction
+│  ├─ pantilt.py         # pan/tilt controller
 │  ├─ stepper_gpio.py    # GPIO stepper driver
-│  └─ mock.py            # Non-GPIO mock controller
-├─ assets/
-│  ├─ models/            # TensorFlow Lite models
-│  └─ screenshots/       # Recovered original code screenshots
 ├─ docs/
 │  ├─ Portfolio_Report.pdf
 │  └─ Design_Brief.docx
