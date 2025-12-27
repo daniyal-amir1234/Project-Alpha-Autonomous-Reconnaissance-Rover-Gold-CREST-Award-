@@ -2,7 +2,7 @@
 Sep 2023 – Jul 2024
 
 ## Overview
-Awarded: Gold CREST Award (Engineering Education Scheme)
+**Awarded: Gold CREST Award (Engineering Education Scheme)**
 
 Project Alpha is an autonomous reconnaissance rover developed as part of the Engineering Education Scheme (EES) and awarded the Gold CREST Award. The system combines a manually driven rover platform with an AI-powered sentry turret, capable of real-time object detection and tracking using TensorFlow Lite and OpenCV running on a Raspberry Pi. The turret uses stepper motors for pan/tilt actuation and a USB webcam for live vision input.
 
