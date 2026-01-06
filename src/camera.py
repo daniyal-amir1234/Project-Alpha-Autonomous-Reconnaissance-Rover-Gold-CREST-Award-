@@ -1,3 +1,5 @@
+# unneeded .py file - just contains a basic camera setup - useful for reference
+
 import cv2
 
 def open_camera(camera_id: int, width: int, height: int) -> cv2.VideoCapture:
