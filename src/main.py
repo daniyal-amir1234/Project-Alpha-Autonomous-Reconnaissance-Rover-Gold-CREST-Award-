@@ -10,9 +10,10 @@ from motor import PanTilt
 
 
 def build_detector(model_path: str, score_threshold: float, max_results: int):
+    # this matches the style used in the TensorFlow Lite Pi example
     base_options = core.BaseOptions(
         file_name=model_path,
-        num_threads=2  # keeping it small cuz Pi usually doesn't like big thread counts
+        num_threads=2  # keeping it small because Pi usually doesn't like huge thread counts
     )
 
     detection_options = processor.DetectionOptions(
@@ -55,7 +56,7 @@ def main():
     detector = build_detector(args.model, args.score_threshold, args.max_results)
     turret = PanTilt(enabled=args.use_gpio)
 
-    # FPS counter
+    # FPS counter (simple average every N frames, like in many student demos)
     fps_avg_frames = 10
     frame_count = 0
     fps = 0.0
@@ -76,10 +77,10 @@ def main():
 
         result = detector.detect(tensor)
 
-        # draw results on the original BGR frame for display
+        # Draw results on the original BGR frame for display
         draw_detections(frame, result)
 
-        # drive turret based on where the best detection is
+        # (optional) drive turret based on where the best detection is
         turret.track(result, frame.shape)
 
         # FPS update
