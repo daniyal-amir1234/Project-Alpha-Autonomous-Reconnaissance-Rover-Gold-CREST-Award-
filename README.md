@@ -60,22 +60,22 @@ Fire sentry turret (not actually created)
 
 ## Repository Structure
 ```
-project-alpha-sentry-rover/
+Project-Alpha-Autonomous-Reconnaissance-Rover-Gold-CREST-Award/
 ├─ src/
-│  ├─ main.py            # main capture + inference loop
-│  ├─ detector.py        # TensorFlow Lite object detector
-│  ├─ camera.py          # USB webcam interface
-│  ├─ tracking.py        # target selection and offsetting calculation
-│  ├─ config.py          # centralised configuration
-├─ hardware/
-│  ├─ pantilt.py         # pan/tilt controller
-│  ├─ stepper_gpio.py    # GPIO stepper driver
+│  ├─ main.py       # Main entry point (camera + detection + tracking loop)
+│  ├─ camera.py     # Webcam capture helpers (kept mostly for reference)
+│  ├─ utils.py      # Drawing bounding boxes, FPS overlay, helpers
+│  └─ motor.py      # Stepper motor pan/tilt control (GPIO + mock mode)
+│
 ├─ docs/
-│  ├─ Portfolio_Report.pdf
-│  └─ Design_Brief.docx
+│  ├─ Gold CREST Award Certificate.png
+│  ├─ Gold_CREST_Final_Portfolio_Report.pdf
+│  └─ Project Display Board Presentation.png
+│
+├─ README.md
 ├─ requirements.txt
-├─ requirements-pi.txt
-└─ README.md
+├─ LICENSE
+└─ .gitignore
 ```
 
 ## Running It
